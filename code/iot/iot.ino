@@ -1,44 +1,58 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-#define soil_moisture_pin 34
-#define Led_pin 2
+// WiFi - remplace par ton réseau
+const char* ssid = "HUAWEI-2.4G-Uv7H";
+const char* password = "uRvNhd3a";
 
-// WiFi
-const char* ssid = "wifi";
-const char* password = "wifi";
-
-// MQTT - ton PC local
-const char* mqttServer = "192.168.1.19";
+// MQTT - localhost de ton PC
+const char* mqttServer = "192.168.100.5"; // <-- mets l'IP de ton PC ici
 const int mqttPort = 1883;
-const char* mqttUser = "molka";
-const char* mqttPassword = "molka123";
+const char* mqttUser = "ghazza";
+const char* mqttPassword = "1234";
 
 String myString;
-int state = 0;
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+int state = 0;
+
+// Valeurs simulées
+float simulateTemperature() {
+  return 20.0 + (random(0, 150) / 10.0); // 20.0 à 35.0 °C
+}
+
+float simulateHumidity() {
+  return 40.0 + (random(0, 400) / 10.0); // 40.0 à 80.0 %
+}
+
+float simulateMoisture() {
+  return 10.0 + (random(0, 600) / 10.0); // 10.0 à 70.0 %
+}
+
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived in topic: ");
+  Serial.print("Message reçu sur topic: ");
   Serial.println(topic);
+  Serial.print("Message: ");
   for (int i = 0; i < length; i++) {
     Serial.print((char)payload[i]);
     if (i == 0) {
-      state = (int)(payload[i]) - 48;
+      state = (int)(payload[i] - '0');
     }
   }
   Serial.println();
+  Serial.println("-----------------------");
 }
 
 void reconnect() {
   while (!client.connected()) {
-    Serial.println("Connecting to MQTT...");
+    Serial.println("Connexion MQTT...");
     if (client.connect("ESP32Client", mqttUser, mqttPassword)) {
-      Serial.println("connected");
+      Serial.println("Connecté au broker MQTT !");
       client.subscribe("pump");
     } else {
-      Serial.print("failed, state: ");
+      Serial.print("Echec, état: ");
       Serial.println(client.state());
       delay(2000);
     }
@@ -47,18 +61,18 @@ void reconnect() {
 
 void setup() {
   Serial.begin(115200);
-  pinMode(Led_pin, OUTPUT);
+  randomSeed(analogRead(0));
 
   WiFi.begin(ssid, password);
+  Serial.print("Connexion WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.println("Connecting to WiFi...");
+    Serial.print(".");
   }
-  Serial.println("Connected to WiFi!");
+  Serial.println("\nWiFi connecté ! IP: " + WiFi.localIP().toString());
 
   client.setServer(mqttServer, mqttPort);
   client.setCallback(callback);
-  reconnect();
 }
 
 void loop() {
@@ -67,27 +81,22 @@ void loop() {
   }
   client.loop();
 
-  int raw = analogRead(soil_moisture_pin);
-  float moisture = (raw / 40.95);
+  // Valeurs simulées
+  float temp = simulateTemperature();
+  float humidity = simulateHumidity();
+  float moisture = simulateMoisture();
 
-  float temp = 25.0;
-  float humidity = 60.0;
-
-  myString = "{'id':'test','temprature':";
-  myString += String(temp);
-  myString += ",'humidity':";
-  myString += String(humidity);
-  myString += ",'moisture':";
-  myString += String(moisture);
+  // Construction du message JSON
+  myString = "{\"id\":\"esp32_sim\",\"temperature\":";
+  myString += String(temp, 1);
+  myString += ",\"humidity\":";
+  myString += String(humidity, 1);
+  myString += ",\"moisture\":";
+  myString += String(moisture, 1);
   myString += "}";
 
-  Serial.print("Moisture: ");
-  Serial.print(moisture);
-  Serial.println("%");
-  Serial.println(myString);
-
+  Serial.println("Envoi: " + myString);
   client.publish("Smartirrigation", myString.c_str());
-  digitalWrite(Led_pin, state);
 
-  delay(30000);
+  delay(30000); // envoie toutes les 30 secondes
 }
