@@ -6,10 +6,11 @@ const char* ssid = "HUAWEI-2.4G-Uv7H";
 const char* password = "uRvNhd3a";
 
 // MQTT - localhost de ton PC
-const char* mqttServer = "192.168.100.5"; // <-- mets l'IP de ton PC ici
+const char* mqttServer = "192.168.1.19";
 const int mqttPort = 1883;
-const char* mqttUser = "ghazza";
-const char* mqttPassword = "1234";
+const char* mqttUser = "molka";
+const char* mqttPassword = "molka123";
+
 
 String myString;
 
